@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NeonArcade – Mini Game Hub</title>
-  <meta name="description" content="A premium browser-based mini game arcade featuring Pong, Snake, Breakout, 2048, Flappy Bird, and more – built with vanilla HTML, CSS & JS." />
+  <meta name="description" content="A premium browser-based mini game arcade featuring Pong, Snake, Breakout, 2048, Ludo, and more – built with vanilla HTML, CSS & JS." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
@@ -19,16 +19,41 @@
     <span class="logo-text">NeonArcade</span>
   </div>
 
+  <!-- User chip -->
+  <div id="user-chip" class="user-chip" title="Change profile">
+    <span id="user-avatar-sidebar">👾</span>
+    <div class="user-chip-info">
+      <span id="user-name-sidebar">Guest</span>
+      <span class="user-badge" id="user-badge-sidebar">Guest</span>
+    </div>
+    <span class="user-chip-edit">✏️</span>
+  </div>
+
   <nav class="nav-menu">
     <button class="nav-item active" data-category="home" id="nav-home">
       <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
     </button>
 
     <div class="nav-category">
+      <span class="category-label">Multiplayer</span>
+      <button class="nav-item" data-action="create-room" id="nav-create-room">
+        <span class="nav-icon">🎮</span><span class="nav-label">Create Room</span>
+      </button>
+      <button class="nav-item" data-action="join-room" id="nav-join-room">
+        <span class="nav-icon">🔑</span><span class="nav-label">Join Room</span>
+      </button>
+    </div>
+
+    <div class="nav-category">
       <span class="category-label">Arcade</span>
       <button class="nav-item" data-game="pong"     id="nav-pong">     <span class="nav-icon">🏓</span><span class="nav-label">Pong</span></button>
       <button class="nav-item" data-game="snake"    id="nav-snake">    <span class="nav-icon">🐍</span><span class="nav-label">Snake</span></button>
       <button class="nav-item" data-game="breakout" id="nav-breakout"> <span class="nav-icon">🧱</span><span class="nav-label">Breakout</span></button>
+    </div>
+
+    <div class="nav-category">
+      <span class="category-label">Board</span>
+      <button class="nav-item" data-game="ludo"     id="nav-ludo">     <span class="nav-icon">🎲</span><span class="nav-label">Ludo (2-4P)</span><span class="nav-badge">NEW</span></button>
     </div>
 
     <div class="nav-category">
@@ -63,6 +88,7 @@
   <div class="sidebar-footer">
     <button id="music-toggle" class="icon-btn" title="Toggle Music">🎵</button>
     <button id="leaderboard-btn" class="icon-btn" title="Leaderboard">🏆</button>
+    <button id="profile-btn" class="icon-btn" title="My Profile">👤</button>
   </div>
 </aside>
 
@@ -76,10 +102,38 @@
   <section id="view-home" class="view active">
     <div class="home-header">
       <h1 class="home-title">Welcome to <span class="neon">NeonArcade</span></h1>
-      <p class="home-subtitle">15 games, infinite fun — pick a game and play!</p>
+      <p class="home-subtitle" id="home-greeting">16 games · Multiplayer · Leaderboard – let's play!</p>
+    </div>
+
+    <!-- Multiplayer Quick Actions -->
+    <div class="mp-quick-row">
+      <button class="mp-quick-btn" data-action="create-room" id="home-create-room">
+        <span class="mp-q-icon">🎮</span>
+        <div>
+          <div class="mp-q-title">Create Room</div>
+          <div class="mp-q-sub">Host a pass-and-play session</div>
+        </div>
+      </button>
+      <button class="mp-quick-btn" data-action="join-room" id="home-join-room">
+        <span class="mp-q-icon">🔑</span>
+        <div>
+          <div class="mp-q-title">Join Room</div>
+          <div class="mp-q-sub">Enter a room code to join</div>
+        </div>
+      </button>
     </div>
 
     <div class="game-grid">
+      <!-- Board -->
+      <div class="game-card featured-card" data-game="ludo">
+        <div class="card-glow" style="--c:#ffa502"></div>
+        <div class="card-badge">NEW</div>
+        <div class="card-icon">🎲</div>
+        <h3>Ludo</h3>
+        <p>2–4 player classic board game</p>
+        <span class="card-tag">Board · Multiplayer</span>
+        <div class="card-score">Best: <span id="hs-ludo">0</span></div>
+      </div>
       <!-- Arcade -->
       <div class="game-card" data-game="pong">
         <div class="card-glow" style="--c:#00f5ff"></div>
@@ -185,7 +239,7 @@
         <div class="card-glow" style="--c:#60a5fa"></div>
         <div class="card-icon">🟦</div>
         <h3>Tetris</h3>
-        <p>Stack & clear lines</p>
+        <p>Stack &amp; clear lines</p>
         <span class="card-tag">Classic</span>
         <div class="card-score">Best: <span id="hs-tetris">0</span></div>
       </div>
@@ -224,12 +278,68 @@
 
 </main>
 
+<!-- ─── PROFILE MODAL ─────────────────────────────────────────────────────── -->
+<div id="profile-modal" class="modal hidden">
+  <div class="modal-box profile-box">
+    <h2>👤 Your Profile</h2>
+    <div class="profile-avatar-row">
+      <div class="avatar-picker" id="avatar-picker">
+        👾 🦁 🐯 🦊 🐺 🦝 🐸 🐲 🤖 🎃 👻 🎯 🚀 💎 ⚡
+      </div>
+    </div>
+    <div id="selected-avatar-display" class="selected-avatar">👾</div>
+    <div class="profile-form-row">
+      <input type="text" id="profile-name-input" class="profile-input" placeholder="Enter your name…" maxlength="18"/>
+    </div>
+    <div class="profile-actions">
+      <button id="save-profile-btn" class="btn-primary" style="padding:10px 32px">💾 Save</button>
+      <button id="logout-profile-btn" class="btn-secondary" style="padding:10px 20px">🚪 Reset</button>
+      <button id="close-profile-btn" class="btn-secondary" style="padding:10px 16px">✕</button>
+    </div>
+    <p id="profile-status" style="color:var(--accent);font-size:.8rem;margin-top:10px;min-height:20px;"></p>
+  </div>
+</div>
+
 <!-- ─── LEADERBOARD MODAL ─────────────────────────────────────────────────── -->
 <div id="leaderboard-modal" class="modal hidden">
-  <div class="modal-box">
+  <div class="modal-box lb-box">
     <h2>🏆 Leaderboard</h2>
+    <div class="lb-tabs" id="lb-tabs"></div>
     <div id="leaderboard-content"></div>
-    <button class="btn-primary" id="close-lb">Close</button>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
+      <button class="btn-secondary" id="clear-lb-btn" style="font-size:.78rem;padding:8px 16px">🗑 Clear Game LB</button>
+      <button class="btn-primary" id="close-lb">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ROOM MODAL ────────────────────────────────────────────────────────── -->
+<div id="room-modal" class="modal hidden">
+  <div class="modal-box room-box">
+    <div id="room-create-view">
+      <h2>🎮 Create a Room</h2>
+      <p class="modal-sub">Pick a game for your multiplayer session</p>
+      <div id="mp-game-picker" class="mp-game-picker"></div>
+      <button id="room-create-confirm-btn" class="btn-primary room-action-btn">Generate Room Code →</button>
+      <button class="btn-secondary room-close-btn" style="margin-top:10px">Cancel</button>
+    </div>
+    <div id="room-created-view" style="display:none">
+      <h2>Room Created! 🎉</h2>
+      <p class="modal-sub">Share this code with friends</p>
+      <div class="room-code-display" id="room-code-display">----</div>
+      <div class="room-code-hint">Room Code · Tap to copy</div>
+      <div class="room-players-list" id="room-players-list"></div>
+      <button id="room-launch-btn" class="btn-primary room-action-btn">🚀 Launch Game</button>
+      <button class="btn-secondary room-close-btn" style="margin-top:10px">Cancel</button>
+    </div>
+    <div id="room-join-view" style="display:none">
+      <h2>🔑 Join a Room</h2>
+      <p class="modal-sub">Enter the room code given by the host</p>
+      <input type="text" id="room-code-input" class="profile-input" placeholder="e.g. BOLT4821" maxlength="10" style="text-transform:uppercase;letter-spacing:.15em;font-size:1.3rem;text-align:center"/>
+      <p id="room-join-error" style="color:var(--neon-pink);font-size:.8rem;min-height:18px;margin-top:6px;"></p>
+      <button id="room-join-confirm-btn" class="btn-primary room-action-btn" style="margin-top:14px">Join Room →</button>
+      <button class="btn-secondary room-close-btn" style="margin-top:10px">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -252,6 +362,8 @@
 <!-- ─── SCRIPTS ───────────────────────────────────────────────────────────── -->
 <script src="js/audio.js"></script>
 <script src="js/storage.js"></script>
+<script src="js/user.js"></script>
+<script src="js/multiplayer.js"></script>
 <script src="js/pong.js"></script>
 <script src="js/snake.js"></script>
 <script src="js/breakout.js"></script>
@@ -267,6 +379,7 @@
 <script src="js/minesweeper.js"></script>
 <script src="js/whack.js"></script>
 <script src="js/hangman.js"></script>
+<script src="js/ludo.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

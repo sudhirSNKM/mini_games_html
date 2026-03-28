@@ -1,5 +1,5 @@
 /* ───────────────────────────────────────────────
-   main.js – NeonArcade Hub Controller
+   main.js – NeonArcade Hub Controller v2
    ─────────────────────────────────────────────── */
 
 const GAMES = {
@@ -18,12 +18,15 @@ const GAMES = {
   minesweeper: MinesweeperGame,
   whack:       WhackGame,
   hangman:     HangmanGame,
+  ludo:        LudoGame,
 };
 
 // ── State ──────────────────────────────────────
-let currentGame = null;
-let isPaused    = false;
-let musicEnabled = true;
+let currentGame   = null;
+let isPaused      = false;
+let musicEnabled  = true;
+let currentGameId = null;
+let activeRoomCode = null;
 
 // ── DOM Refs ───────────────────────────────────
 const viewHome    = document.getElementById('view-home');
@@ -49,6 +52,31 @@ const hamburger   = document.getElementById('hamburger');
 const sidebar     = document.getElementById('sidebar');
 const toast       = document.getElementById('toast');
 
+// Profile
+const profileModal   = document.getElementById('profile-modal');
+const profileBtn     = document.getElementById('profile-btn');
+const profileNameInp = document.getElementById('profile-name-input');
+const saveProfileBtn = document.getElementById('save-profile-btn');
+const logoutProfileBtn= document.getElementById('logout-profile-btn');
+const closeProfileBtn= document.getElementById('close-profile-btn');
+const profileStatus  = document.getElementById('profile-status');
+const avatarPicker   = document.getElementById('avatar-picker');
+const selectedAvatarDisplay = document.getElementById('selected-avatar-display');
+const userChip       = document.getElementById('user-chip');
+const userNameSidebar= document.getElementById('user-name-sidebar');
+const userAvatarSidebar = document.getElementById('user-avatar-sidebar');
+const userBadgeSidebar= document.getElementById('user-badge-sidebar');
+
+// Room
+const roomModal      = document.getElementById('room-modal');
+const roomCreateView = document.getElementById('room-create-view');
+const roomCreatedView= document.getElementById('room-created-view');
+const roomJoinView   = document.getElementById('room-join-view');
+const roomCodeDisplay= document.getElementById('room-code-display');
+const roomPlayersList= document.getElementById('room-players-list');
+const roomCodeInput  = document.getElementById('room-code-input');
+const roomJoinError  = document.getElementById('room-join-error');
+
 // ── Game Meta ─────────────────────────────────
 const META = {
   pong:        { name:'Pong',            icon:'🏓' },
@@ -66,7 +94,11 @@ const META = {
   minesweeper: { name:'Minesweeper',     icon:'💣' },
   whack:       { name:'Whack-a-Mole',    icon:'🐹' },
   hangman:     { name:'Hangman',         icon:'🪢' },
+  ludo:        { name:'Ludo',            icon:'🎲' },
 };
+
+// Multiplayer-capable games
+const MP_GAMES = ['ludo','tictactoe','memory'];
 
 // ── Navigation ─────────────────────────────────
 function showHome() {
@@ -75,12 +107,14 @@ function showHome() {
   viewGame.classList.remove('active');
   setNavActive('home');
   refreshHomeBadges();
+  updateHomeGreeting();
 }
 
 function launchGame(id) {
   if (!GAMES[id]) return;
   stopCurrentGame();
-  currentGame = GAMES[id];
+  currentGameId = id;
+  currentGame = new GAMES[id]();
   isPaused = false;
 
   viewHome.classList.remove('active');
@@ -99,11 +133,12 @@ function launchGame(id) {
 
   // Mount the game
   currentGame.mount(gameCont);
-  Audio.click();
+  if (typeof Audio !== 'undefined') Audio.click();
 }
 
 function stopCurrentGame() {
   if (currentGame) { currentGame.stop(); currentGame = null; }
+  currentGameId = null;
 }
 
 // ── Score / Game-Over Hooks (called by games) ──
@@ -120,9 +155,14 @@ const MainApp = {
     goOverlay.dataset.game = gameId;
 
     Storage.setHigh(gameId, score);
+
+    // Also add to per-player leaderboard
+    const user = UserSystem.getCurrentUser();
+    UserSystem.addLBEntry(gameId, score, user);
+
     refreshHomeBadges();
-    won ? Audio.win() : Audio.lose();
-    showToast(won ? `New high: ${score}!` : `Score: ${score}`);
+    if (typeof Audio !== 'undefined') { won ? Audio.win() : Audio.lose(); }
+    showToast(won ? `🏆 New best: ${score}!` : `Score: ${score}`);
   }
 };
 
@@ -132,7 +172,7 @@ pauseBtn.addEventListener('click', () => {
   isPaused = !isPaused;
   currentGame.pause();
   pauseBtn.textContent = isPaused ? '▶ Resume' : '⏸ Pause';
-  Audio.click();
+  if (typeof Audio !== 'undefined') Audio.click();
 });
 
 restartBtn.addEventListener('click', () => {
@@ -142,10 +182,10 @@ restartBtn.addEventListener('click', () => {
   currentGame.restart();
   liveScore.textContent = '0';
   goOverlay.classList.add('hidden');
-  Audio.click();
+  if (typeof Audio !== 'undefined') Audio.click();
 });
 
-backBtn.addEventListener('click', () => { Audio.click(); showHome(); });
+backBtn.addEventListener('click', () => { if (typeof Audio !== 'undefined') Audio.click(); showHome(); });
 
 goRestart.addEventListener('click', () => {
   const id = goOverlay.dataset.game;
@@ -161,10 +201,13 @@ goHome.addEventListener('click', () => {
 // ── Nav items ──────────────────────────────────
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
-    const cat  = btn.dataset.category;
-    const game = btn.dataset.game;
-    if (cat === 'home') { showHome(); Audio.click(); }
-    else if (game)      { launchGame(game); }
+    const cat    = btn.dataset.category;
+    const game   = btn.dataset.game;
+    const action = btn.dataset.action;
+    if (cat === 'home')      { showHome(); if (typeof Audio !== 'undefined') Audio.click(); }
+    else if (game)           { launchGame(game); }
+    else if (action === 'create-room') openCreateRoom();
+    else if (action === 'join-room')   openJoinRoom();
   });
 });
 
@@ -172,28 +215,228 @@ document.querySelectorAll('.game-card').forEach(card => {
   card.addEventListener('click', () => launchGame(card.dataset.game));
 });
 
-// ── Leaderboard ────────────────────────────────
-lbBtn.addEventListener('click', () => {
-  const scores = Storage.getAllHighScores();
-  const entries = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
-  if (!entries.length) {
-    lbContent.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:20px">No scores yet – play some games!</p>';
-  } else {
-    const medals = ['🥇','🥈','🥉'];
-    lbContent.innerHTML = entries.map(([game,score],i) => `
-      <div class="lb-row">
-        <span class="lb-rank">${medals[i]||`#${i+1}`}</span>
-        <span class="lb-name">${META[game]?.icon||'🎮'} ${META[game]?.name||game}</span>
-        <span class="lb-score">${score}</span>
-      </div>`).join('');
-  }
-  lbModal.classList.remove('hidden');
-  Audio.click();
+// MP quick buttons
+document.getElementById('home-create-room').addEventListener('click', openCreateRoom);
+document.getElementById('home-join-room').addEventListener('click', openJoinRoom);
+
+// ── PROFILE ────────────────────────────────────
+let selectedAvatar = '👾';
+
+function openProfile() {
+  const user = UserSystem.getCurrentUser();
+  profileNameInp.value = user.isGuest ? '' : user.name;
+  selectedAvatar = user.avatar || '👾';
+  selectedAvatarDisplay.textContent = selectedAvatar;
+  profileModal.classList.remove('hidden');
+  profileStatus.textContent = '';
+  buildAvatarPicker();
+}
+
+function buildAvatarPicker() {
+  const AVATARS = ['👾','🦁','🐯','🦊','🐺','🦝','🐸','🐲','🤖','🎃','👻','🎯','🚀','💎','⚡','🦄','🐉','🌟'];
+  avatarPicker.innerHTML = '';
+  AVATARS.forEach(av => {
+    const btn = document.createElement('button');
+    btn.textContent = av;
+    btn.className = 'avatar-opt' + (av === selectedAvatar ? ' selected' : '');
+    btn.addEventListener('click', () => {
+      selectedAvatar = av;
+      selectedAvatarDisplay.textContent = av;
+      avatarPicker.querySelectorAll('.avatar-opt').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    avatarPicker.appendChild(btn);
+  });
+}
+
+profileBtn.addEventListener('click', openProfile);
+userChip.addEventListener('click', openProfile);
+
+saveProfileBtn.addEventListener('click', () => {
+  const name = profileNameInp.value.trim();
+  if (!name) { profileStatus.textContent = 'Please enter a name.'; return; }
+  UserSystem.setUser(name, selectedAvatar);
+  profileStatus.textContent = '✅ Profile saved!';
+  updateUserUI();
+  setTimeout(() => profileModal.classList.add('hidden'), 800);
+  showToast(`Welcome, ${name}! 👋`);
 });
 
-closeLb.addEventListener('click', () => { lbModal.classList.add('hidden'); Audio.click(); });
+logoutProfileBtn.addEventListener('click', () => {
+  UserSystem.logout();
+  profileStatus.textContent = '🔄 Profile reset.';
+  updateUserUI();
+  setTimeout(() => profileModal.classList.add('hidden'), 600);
+});
+
+closeProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
+profileModal.addEventListener('click', e => { if (e.target === profileModal) profileModal.classList.add('hidden'); });
+
+function updateUserUI() {
+  const user = UserSystem.getCurrentUser();
+  userNameSidebar.textContent  = user.name;
+  userAvatarSidebar.textContent= user.avatar || '👾';
+  userBadgeSidebar.textContent = user.isGuest ? 'Guest' : 'Player';
+  userBadgeSidebar.className   = 'user-badge ' + (user.isGuest ? 'badge-guest' : 'badge-player');
+  document.getElementById('home-greeting').textContent =
+    user.isGuest
+      ? `16 games · Multiplayer · Leaderboard – let's play!`
+      : `Hey ${user.name} ${user.avatar}! Ready to top the boards?`;
+}
+
+function updateHomeGreeting() { updateUserUI(); }
+
+// ── LEADERBOARD ─────────────────────────────────
+const LB_GAMES = Object.keys(META);
+let currentLBGame = LB_GAMES[0];
+
+lbBtn.addEventListener('click', () => openLeaderboard(currentLBGame));
+
+function openLeaderboard(game) {
+  currentLBGame = game;
+  buildLBTabs(game);
+  renderLBContent(game);
+  lbModal.classList.remove('hidden');
+  if (typeof Audio !== 'undefined') Audio.click();
+}
+
+function buildLBTabs(activeGame) {
+  const tabsEl = document.getElementById('lb-tabs');
+  // Show top game tabs
+  tabsEl.innerHTML = LB_GAMES.map(g =>
+    `<button class="lb-tab${g===activeGame?' active':''}" data-game="${g}">${META[g].icon}</button>`
+  ).join('');
+  tabsEl.querySelectorAll('.lb-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentLBGame = btn.dataset.game;
+      buildLBTabs(currentLBGame);
+      renderLBContent(currentLBGame);
+    });
+  });
+}
+
+function renderLBContent(game) {
+  const entries = UserSystem.getLB(game);
+  const meta = META[game] || { name: game, icon: '🎮' };
+  if (!entries.length) {
+    lbContent.innerHTML = `<p class="lb-empty">No scores yet for ${meta.icon} ${meta.name}.<br>Play a game to appear here!</p>`;
+    return;
+  }
+  const medals = ['🥇','🥈','🥉'];
+  lbContent.innerHTML = `
+    <div class="lb-game-title">${meta.icon} ${meta.name}</div>
+    ${entries.map((e,i) => `
+      <div class="lb-row ${i<3?'lb-top':''}">
+        <span class="lb-rank">${medals[i]||`#${i+1}`}</span>
+        <span class="lb-avatar">${e.avatar||'👾'}</span>
+        <span class="lb-name">${e.name}</span>
+        <span class="lb-score">${e.score.toLocaleString()}</span>
+        <span class="lb-date">${_fmtDate(e.date)}</span>
+      </div>`).join('')}`;
+}
+
+function _fmtDate(ts) {
+  const d = new Date(ts);
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+document.getElementById('clear-lb-btn').addEventListener('click', () => {
+  UserSystem.clearLB(currentLBGame);
+  renderLBContent(currentLBGame);
+  showToast('Leaderboard cleared');
+});
+
+closeLb.addEventListener('click', () => { lbModal.classList.add('hidden'); if (typeof Audio !== 'undefined') Audio.click(); });
 lbModal.addEventListener('click', e => { if (e.target===lbModal) lbModal.classList.add('hidden'); });
-goOverlay.addEventListener('click', e => { if (e.target===goOverlay) goOverlay.classList.add('hidden'); });
+
+// ── ROOM / MULTIPLAYER ─────────────────────────
+let selectedMPGame = 'ludo';
+
+function openCreateRoom() {
+  roomCreateView.style.display  = 'flex';
+  roomCreatedView.style.display = 'none';
+  roomJoinView.style.display    = 'none';
+  buildMPGamePicker();
+  roomModal.classList.remove('hidden');
+}
+
+function openJoinRoom() {
+  roomCreateView.style.display  = 'none';
+  roomCreatedView.style.display = 'none';
+  roomJoinView.style.display    = 'flex';
+  roomCodeInput.value = '';
+  roomJoinError.textContent = '';
+  roomModal.classList.remove('hidden');
+}
+
+function buildMPGamePicker() {
+  const picker = document.getElementById('mp-game-picker');
+  picker.innerHTML = Object.keys(META).map(g => `
+    <button class="mp-pick-btn${g===selectedMPGame?' active':''}" data-game="${g}">
+      <span>${META[g].icon}</span>
+      <span class="mp-pick-name">${META[g].name}</span>
+    </button>`
+  ).join('');
+  picker.querySelectorAll('.mp-pick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedMPGame = btn.dataset.game;
+      picker.querySelectorAll('.mp-pick-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+}
+
+document.getElementById('room-create-confirm-btn').addEventListener('click', () => {
+  const user = UserSystem.getCurrentUser();
+  const room = Multiplayer.createRoom(selectedMPGame, user.name, user.avatar || '👾');
+  activeRoomCode = room.code;
+
+  roomCreateView.style.display  = 'none';
+  roomCreatedView.style.display = 'flex';
+  roomCodeDisplay.textContent = room.code;
+  renderRoomPlayers(room);
+});
+
+roomCodeDisplay.addEventListener('click', () => {
+  navigator.clipboard?.writeText(roomCodeDisplay.textContent).then(() => showToast('Code copied! 📋'));
+});
+
+document.getElementById('room-launch-btn').addEventListener('click', () => {
+  if (!activeRoomCode) return;
+  roomModal.classList.add('hidden');
+  launchGame(selectedMPGame);
+  showToast(`🎮 Room ${activeRoomCode} – pass the device!`);
+});
+
+document.getElementById('room-join-confirm-btn').addEventListener('click', () => {
+  const code = roomCodeInput.value.trim().toUpperCase();
+  if (!code) { roomJoinError.textContent = 'Please enter a room code.'; return; }
+  const user = UserSystem.getCurrentUser();
+  const result = Multiplayer.joinRoom(code, user.name, user.avatar || '👾');
+  if (result.error) { roomJoinError.textContent = result.error; return; }
+  activeRoomCode = code;
+  selectedMPGame = result.gameId;
+
+  roomJoinView.style.display    = 'none';
+  roomCreatedView.style.display = 'flex';
+  roomCodeDisplay.textContent = result.code;
+  renderRoomPlayers(result);
+});
+
+function renderRoomPlayers(room) {
+  roomPlayersList.innerHTML = room.players.map((p,i) => `
+    <div class="room-player-row">
+      <span class="room-player-avatar">${p.avatar||'👾'}</span>
+      <span class="room-player-name">${p.name}</span>
+      ${i===0?'<span class="room-host-badge">Host</span>':''}
+    </div>`).join('');
+}
+
+// Close buttons
+document.querySelectorAll('.room-close-btn').forEach(btn => {
+  btn.addEventListener('click', () => roomModal.classList.add('hidden'));
+});
+roomModal.addEventListener('click', e => { if(e.target===roomModal) roomModal.classList.add('hidden'); });
 
 // ── Music toggle ───────────────────────────────
 musicToggle.addEventListener('click', () => {
@@ -213,7 +456,6 @@ function closeSidebar() {
   hamburger.textContent = '☰';
 }
 
-// Close sidebar on outside tap
 document.addEventListener('click', e => {
   if (window.innerWidth<=768 && sidebar.classList.contains('open')
       && !sidebar.contains(e.target) && e.target!==hamburger) closeSidebar();
@@ -237,7 +479,7 @@ function refreshHomeBadges() {
   });
 }
 
-function showToast(msg, dur=2200) {
+function showToast(msg, dur=2500) {
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), dur);
@@ -246,8 +488,10 @@ function showToast(msg, dur=2200) {
 // ── Keyboard shortcuts ─────────────────────────
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    if (!goOverlay.classList.contains('hidden')) { goOverlay.classList.add('hidden'); return; }
-    if (!lbModal.classList.contains('hidden'))   { lbModal.classList.add('hidden');  return; }
+    if (!goOverlay.classList.contains('hidden'))  { goOverlay.classList.add('hidden'); return; }
+    if (!lbModal.classList.contains('hidden'))    { lbModal.classList.add('hidden');   return; }
+    if (!profileModal.classList.contains('hidden')){ profileModal.classList.add('hidden'); return; }
+    if (!roomModal.classList.contains('hidden'))  { roomModal.classList.add('hidden'); return; }
     if (currentGame) showHome();
   }
   if (e.key === 'p' || e.key === 'P') pauseBtn.click();
@@ -256,5 +500,15 @@ document.addEventListener('keydown', e => {
 // ── Boot ───────────────────────────────────────
 (function boot() {
   refreshHomeBadges();
+  updateUserUI();
+
+  // Auto assign guest name if no profile
+  const user = UserSystem.getCurrentUser();
+  if (user.isGuest) {
+    const guestName = UserSystem.randomGuestName();
+    // Don't save—keep as transient guest
+    document.getElementById('user-name-sidebar').textContent = guestName;
+  }
+
   showHome();
 })();
