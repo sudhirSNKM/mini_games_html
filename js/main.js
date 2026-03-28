@@ -19,6 +19,20 @@ const GAMES = {
   whack:       WhackGame,
   hangman:     HangmanGame,
   ludo:        LudoGame,
+  connect4:    Connect4Game,
+  dino:        DinoGame,
+  sudoku:      SudokuGame,
+  stacker:     StackerGame,
+  wordle:      WordleGame,
+  sequence:    SequenceGame,
+  bubbles:     BubblesGame,
+  hockey:      HockeyGame,
+  flow:        FlowGame,
+  defense:     DefenseGame,
+  solitaire:   SolitaireGame,
+  checkers:    CheckersGame,
+  dots:        DotsGame,
+  tiles:       TilesGame,
 };
 
 // ── State ──────────────────────────────────────
@@ -95,10 +109,24 @@ const META = {
   whack:       { name:'Whack-a-Mole',    icon:'🐹' },
   hangman:     { name:'Hangman',         icon:'🪢' },
   ludo:        { name:'Ludo',            icon:'🎲' },
+  connect4:    { name:'Connect Four',    icon:'🔵' },
+  dino:        { name:'Neon Rush',       icon:'🦖' },
+  sudoku:      { name:'Neon Sudoku',     icon:'🔢' },
+  stacker:     { name:'Neon Stacker',    icon:'🏗️' },
+  wordle:      { name:'Neon Word',       icon:'🔤' },
+  sequence:    { name:'Sequence',        icon:'🚦' },
+  bubbles:     { name:'Bubble Pop',      icon:'🫧' },
+  hockey:      { name:'Air Hockey',      icon:'🏒' },
+  flow:        { name:'Neon Flow',       icon:'🌊' },
+  defense:     { name:'Neon Defense',    icon:'🛡️' },
+  solitaire:   { name:'Solitaire',       icon:'🃏' },
+  checkers:    { name:'Checkers',        icon:'🏁' },
+  dots:        { name:'Dots & Boxes',    icon:'⚬' },
+  tiles:       { name:'Neon Tiles',      icon:'🎹' },
 };
 
 // Multiplayer-capable games
-const MP_GAMES = ['ludo','tictactoe','memory'];
+const MP_GAMES = ['ludo','tictactoe','memory','connect4','checkers','dots','hockey'];
 
 // ── Navigation ─────────────────────────────────
 function showHome() {
@@ -120,6 +148,7 @@ function launchGame(id) {
   viewHome.classList.remove('active');
   viewGame.classList.add('active');
   gameCont.innerHTML = '';
+  gameCont.className = 'animate-in';
 
   const meta = META[id] || { name: id, icon:'🎮' };
   titleBar.textContent = `${meta.icon} ${meta.name}`;
@@ -148,10 +177,15 @@ const MainApp = {
   },
   gameOver(gameId, score, message, won) {
     stopCurrentGame();
+    const box = goOverlay.querySelector('.modal-box');
+    goOverlay.classList.remove('hidden');
+    goOverlay.classList.add('modal-animate');
     goTitle.textContent  = won ? '🏆 Victory!' : 'Game Over';
     goEmoji.textContent  = won ? '🏆' : '💀';
     goMsg.textContent    = message;
-    goOverlay.classList.remove('hidden');
+    
+    if (won) showConfetti();
+    
     goOverlay.dataset.game = gameId;
 
     Storage.setHigh(gameId, score);
@@ -483,6 +517,41 @@ function showToast(msg, dur=2500) {
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), dur);
+}
+
+function showConfetti() {
+  const canvas = document.createElement('canvas');
+  canvas.style.position = 'fixed';
+  canvas.style.inset = '0';
+  canvas.style.pointerEvents = 'none';
+  canvas.style.zIndex = '1000';
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const particles = Array.from({length: 100}, () => ({
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    dx: (Math.random() - 0.5) * 15,
+    dy: (Math.random() - 0.5) * 25,
+    r: 4 + Math.random() * 6,
+    c: `hsl(${Math.random()*360}, 100%, 70%)`
+  }));
+
+  function anim() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive = false;
+    particles.forEach(p => {
+      p.x += p.dx; p.y += p.dy; p.dy += 0.5;
+      if (p.y < canvas.height) alive = true;
+      ctx.fillStyle = p.c;
+      ctx.fillRect(p.x, p.y, p.r, p.r);
+    });
+    if (alive) requestAnimationFrame(anim);
+    else canvas.remove();
+  }
+  anim();
 }
 
 // ── Keyboard shortcuts ─────────────────────────

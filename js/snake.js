@@ -21,26 +21,22 @@ const SnakeGame = (() => {
     paused = false;
   }
 
-  function drawCell(x, y, r, g, b, glow) {
-    const px = x*CS, py = y*CS;
-    if (glow) { ctx.shadowBlur=16; ctx.shadowColor=`rgb(${r},${g},${b})`; }
-    ctx.fillStyle=`rgb(${r},${g},${b})`;
-    ctx.beginPath(); ctx.roundRect(px+1,py+1,CS-2,CS-2,4); ctx.fill();
-    ctx.shadowBlur=0;
-  }
-
   function draw() {
+    if (!running || !ctx) return;
     ctx.fillStyle='#080b14'; ctx.fillRect(0,0,W,H);
+    
     // grid
     ctx.strokeStyle='rgba(255,255,255,.03)';
     for(let x=0;x<COLS;x++) for(let y=0;y<ROWS;y++){
       ctx.strokeRect(x*CS,y*CS,CS,CS);
     }
-    // food
-    ctx.shadowBlur=24; ctx.shadowColor='#ff2d6b';
+
+    // food pulse
+    const pulse = 1 + 0.15 * Math.sin(Date.now()/150);
+    ctx.shadowBlur=24 * pulse; ctx.shadowColor='#ff2d6b';
     ctx.fillStyle='#ff2d6b';
     ctx.beginPath();
-    ctx.arc(food.x*CS+CS/2, food.y*CS+CS/2, CS/2-2, 0, Math.PI*2);
+    ctx.arc(food.x*CS+CS/2, food.y*CS+CS/2, (CS/2-2)*pulse, 0, Math.PI*2);
     ctx.fill(); ctx.shadowBlur=0;
 
     // snake
@@ -49,12 +45,22 @@ const SnakeGame = (() => {
       const r = Math.round(0   + ratio*57);
       const g = Math.round(245 * ratio);
       const bv = Math.round(255 * ratio);
-      drawCell(seg.x, seg.y, r, g, bv, i===0);
+      const headPulse = i === 0 ? 1 + 0.1 * Math.sin(Date.now()/100) : 1;
+      
+      const px = seg.x*CS, py = seg.y*CS;
+      if (i === 0) { ctx.shadowBlur=20*headPulse; ctx.shadowColor=`rgb(${r},${g},${bv})`; }
+      ctx.fillStyle=`rgb(${r},${g},${bv})`;
+      ctx.beginPath(); 
+      ctx.roundRect(px+1, py+1, (CS-2)*headPulse, (CS-2)*headPulse, 4); 
+      ctx.fill();
+      ctx.shadowBlur=0;
     });
 
     // score
     ctx.fillStyle='rgba(0,245,255,.7)'; ctx.font='bold 14px Orbitron,monospace';
     ctx.textAlign='right'; ctx.fillText(`Score: ${score}`, W-10, 20);
+
+    if (running && !paused) requestAnimationFrame(draw);
   }
 
   function step() {
@@ -75,8 +81,9 @@ const SnakeGame = (() => {
       speed = Math.max(60, speed - 3);
       clearInterval(gameLoop);
       gameLoop = setInterval(step, speed);
-    } else { snake.pop(); }
-    draw();
+    } else { 
+      snake.pop(); 
+    }
   }
 
   function mount(container) {
@@ -88,13 +95,14 @@ const SnakeGame = (() => {
       canvas.style.maxWidth = '100%';
       ctx = canvas.getContext('2d');
     }
+    container.innerHTML = '';
     container.appendChild(canvas);
     running = true;
-    draw();
+    requestAnimationFrame(draw);
     gameLoop = setInterval(step, speed);
   }
 
-  document.addEventListener('keydown', e => {
+  const handler = e => {
     if (!running) return;
     const map = {
       ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},
@@ -103,20 +111,11 @@ const SnakeGame = (() => {
     };
     const d = map[e.key];
     if (d && !(d.x===-dir.x && d.y===-dir.y)) { nextDir=d; e.preventDefault(); }
-  });
-
-  // Swipe
-  let tx, ty;
-  document.addEventListener('touchstart', e => { tx=e.touches[0].clientX; ty=e.touches[0].clientY; });
-  document.addEventListener('touchend', e => {
-    if (!running) return;
-    const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
-    if (Math.abs(dx)>Math.abs(dy)) nextDir = dx>0?{x:1,y:0}:{x:-1,y:0};
-    else nextDir = dy>0?{x:0,y:1}:{x:0,y:-1};
-  });
+  };
+  document.addEventListener('keydown', handler);
 
   function pause()   { paused = !paused; }
-  function restart() { mount(canvas.parentElement); }
+  function restart() { reset(); running=true; requestAnimationFrame(draw); }
   function stop()    { running=false; clearInterval(gameLoop); }
 
   return { id:'snake', mount, pause, restart, stop };
