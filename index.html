@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeonArcade – Mini Game Hub</title>
+  <meta name="description" content="A premium browser-based mini game arcade featuring Pong, Snake, Breakout, 2048, Flappy Bird, and more – built with vanilla HTML, CSS & JS." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ─── SIDEBAR ─────────────────────────────────────────────────────────── -->
+<aside id="sidebar">
+  <div class="logo">
+    <span class="logo-icon">🕹</span>
+    <span class="logo-text">NeonArcade</span>
+  </div>
+
+  <nav class="nav-menu">
+    <button class="nav-item active" data-category="home" id="nav-home">
+      <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
+    </button>
+
+    <div class="nav-category">
+      <span class="category-label">Arcade</span>
+      <button class="nav-item" data-game="pong"     id="nav-pong">     <span class="nav-icon">🏓</span><span class="nav-label">Pong</span></button>
+      <button class="nav-item" data-game="snake"    id="nav-snake">    <span class="nav-icon">🐍</span><span class="nav-label">Snake</span></button>
+      <button class="nav-item" data-game="breakout" id="nav-breakout"> <span class="nav-icon">🧱</span><span class="nav-label">Breakout</span></button>
+    </div>
+
+    <div class="nav-category">
+      <span class="category-label">Puzzle</span>
+      <button class="nav-item" data-game="g2048"   id="nav-2048">     <span class="nav-icon">🔢</span><span class="nav-label">2048</span></button>
+      <button class="nav-item" data-game="sliding" id="nav-sliding">  <span class="nav-icon">🧩</span><span class="nav-label">Sliding Puzzle</span></button>
+      <button class="nav-item" data-game="memory"  id="nav-memory">   <span class="nav-icon">🃏</span><span class="nav-label">Memory Cards</span></button>
+    </div>
+
+    <div class="nav-category">
+      <span class="category-label">Action</span>
+      <button class="nav-item" data-game="flappy"  id="nav-flappy">   <span class="nav-icon">🐦</span><span class="nav-label">Flappy Bird</span></button>
+      <button class="nav-item" data-game="car"     id="nav-car">      <span class="nav-icon">🚗</span><span class="nav-label">Car Dodger</span></button>
+      <button class="nav-item" data-game="shooter" id="nav-shooter">  <span class="nav-icon">🔫</span><span class="nav-label">Space Shooter</span></button>
+    </div>
+
+    <div class="nav-category">
+      <span class="category-label">Brain</span>
+      <button class="nav-item" data-game="tictactoe" id="nav-tictactoe"><span class="nav-icon">❌</span><span class="nav-label">Tic Tac Toe</span></button>
+      <button class="nav-item" data-game="quiz"      id="nav-quiz">     <span class="nav-icon">🧠</span><span class="nav-label">Quiz Game</span></button>
+      <button class="nav-item" data-game="hangman"   id="nav-hangman">  <span class="nav-icon">🪢</span><span class="nav-label">Hangman</span></button>
+    </div>
+
+    <div class="nav-category">
+      <span class="category-label">Classic</span>
+      <button class="nav-item" data-game="tetris"      id="nav-tetris">      <span class="nav-icon">🟦</span><span class="nav-label">Tetris</span></button>
+      <button class="nav-item" data-game="minesweeper" id="nav-minesweeper"><span class="nav-icon">💣</span><span class="nav-label">Minesweeper</span></button>
+      <button class="nav-item" data-game="whack"       id="nav-whack">      <span class="nav-icon">🐹</span><span class="nav-label">Whack-a-Mole</span></button>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button id="music-toggle" class="icon-btn" title="Toggle Music">🎵</button>
+    <button id="leaderboard-btn" class="icon-btn" title="Leaderboard">🏆</button>
+  </div>
+</aside>
+
+<!-- ─── HAMBURGER (mobile) ───────────────────────────────────────────────── -->
+<button id="hamburger" aria-label="Toggle menu">☰</button>
+
+<!-- ─── MAIN CONTENT ─────────────────────────────────────────────────────── -->
+<main id="main-content">
+
+  <!-- HOME DASHBOARD -->
+  <section id="view-home" class="view active">
+    <div class="home-header">
+      <h1 class="home-title">Welcome to <span class="neon">NeonArcade</span></h1>
+      <p class="home-subtitle">11 games, infinite fun — pick a game and play!</p>
+    </div>
+
+    <div class="game-grid">
+      <!-- Arcade -->
+      <div class="game-card" data-game="pong">
+        <div class="card-glow" style="--c:#00f5ff"></div>
+        <div class="card-icon">🏓</div>
+        <h3>Pong</h3>
+        <p>Classic paddle vs AI</p>
+        <span class="card-tag">Arcade</span>
+        <div class="card-score">Best: <span id="hs-pong">0</span></div>
+      </div>
+      <div class="game-card" data-game="snake">
+        <div class="card-glow" style="--c:#39ff14"></div>
+        <div class="card-icon">🐍</div>
+        <h3>Snake</h3>
+        <p>Eat, grow, survive</p>
+        <span class="card-tag">Arcade</span>
+        <div class="card-score">Best: <span id="hs-snake">0</span></div>
+      </div>
+      <div class="game-card" data-game="breakout">
+        <div class="card-glow" style="--c:#ff6b6b"></div>
+        <div class="card-icon">🧱</div>
+        <h3>Breakout</h3>
+        <p>Smash bricks, level up</p>
+        <span class="card-tag">Arcade</span>
+        <div class="card-score">Best: <span id="hs-breakout">0</span></div>
+      </div>
+      <!-- Puzzle -->
+      <div class="game-card" data-game="g2048">
+        <div class="card-glow" style="--c:#f7971e"></div>
+        <div class="card-icon">🔢</div>
+        <h3>2048</h3>
+        <p>Merge tiles to 2048</p>
+        <span class="card-tag">Puzzle</span>
+        <div class="card-score">Best: <span id="hs-g2048">0</span></div>
+      </div>
+      <div class="game-card" data-game="sliding">
+        <div class="card-glow" style="--c:#a78bfa"></div>
+        <div class="card-icon">🧩</div>
+        <h3>Sliding Puzzle</h3>
+        <p>Arrange the tiles</p>
+        <span class="card-tag">Puzzle</span>
+        <div class="card-score">Best: <span id="hs-sliding">0</span></div>
+      </div>
+      <div class="game-card" data-game="memory">
+        <div class="card-glow" style="--c:#f472b6"></div>
+        <div class="card-icon">🃏</div>
+        <h3>Memory Cards</h3>
+        <p>Match the pairs</p>
+        <span class="card-tag">Puzzle</span>
+        <div class="card-score">Best: <span id="hs-memory">0</span></div>
+      </div>
+      <!-- Action -->
+      <div class="game-card" data-game="flappy">
+        <div class="card-glow" style="--c:#facc15"></div>
+        <div class="card-icon">🐦</div>
+        <h3>Flappy Bird</h3>
+        <p>Dodge the pipes</p>
+        <span class="card-tag">Action</span>
+        <div class="card-score">Best: <span id="hs-flappy">0</span></div>
+      </div>
+      <div class="game-card" data-game="car">
+        <div class="card-glow" style="--c:#fb923c"></div>
+        <div class="card-icon">🚗</div>
+        <h3>Car Dodger</h3>
+        <p>Swerve through traffic</p>
+        <span class="card-tag">Action</span>
+        <div class="card-score">Best: <span id="hs-car">0</span></div>
+      </div>
+      <div class="game-card" data-game="shooter">
+        <div class="card-glow" style="--c:#f43f5e"></div>
+        <div class="card-icon">🔫</div>
+        <h3>Space Shooter</h3>
+        <p>Blast alien invaders</p>
+        <span class="card-tag">Action</span>
+        <div class="card-score">Best: <span id="hs-shooter">0</span></div>
+      </div>
+      <!-- Brain -->
+      <div class="game-card" data-game="tictactoe">
+        <div class="card-glow" style="--c:#818cf8"></div>
+        <div class="card-icon">❌</div>
+        <h3>Tic Tac Toe</h3>
+        <p>Beat the Minimax AI</p>
+        <span class="card-tag">Brain</span>
+        <div class="card-score">Best: <span id="hs-tictactoe">0</span></div>
+      </div>
+      <div class="game-card" data-game="quiz">
+        <div class="card-glow" style="--c:#34d399"></div>
+        <div class="card-icon">🧠</div>
+        <h3>Quiz Game</h3>
+        <p>Test your knowledge</p>
+        <span class="card-tag">Brain</span>
+        <div class="card-score">Best: <span id="hs-quiz">0</span></div>
+      </div>
+      <div class="game-card" data-game="hangman">
+        <div class="card-glow" style="--c:#fb7185"></div>
+        <div class="card-icon">🪢</div>
+        <h3>Hangman</h3>
+        <p>Guess the word</p>
+        <span class="card-tag">Brain</span>
+        <div class="card-score">Best: <span id="hs-hangman">0</span></div>
+      </div>
+      <!-- Classic -->
+      <div class="game-card" data-game="tetris">
+        <div class="card-glow" style="--c:#60a5fa"></div>
+        <div class="card-icon">🟦</div>
+        <h3>Tetris</h3>
+        <p>Stack & clear lines</p>
+        <span class="card-tag">Classic</span>
+        <div class="card-score">Best: <span id="hs-tetris">0</span></div>
+      </div>
+      <div class="game-card" data-game="minesweeper">
+        <div class="card-glow" style="--c:#4ade80"></div>
+        <div class="card-icon">💣</div>
+        <h3>Minesweeper</h3>
+        <p>Defuse the minefield</p>
+        <span class="card-tag">Classic</span>
+        <div class="card-score">Best: <span id="hs-minesweeper">0</span></div>
+      </div>
+      <div class="game-card" data-game="whack">
+        <div class="card-glow" style="--c:#fb923c"></div>
+        <div class="card-icon">🐹</div>
+        <h3>Whack-a-Mole</h3>
+        <p>Smash the moles!</p>
+        <span class="card-tag">Classic</span>
+        <div class="card-score">Best: <span id="hs-whack">0</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── GAME VIEWS (injected by JS) ──────────────────────────────────────── -->
+  <section id="view-game" class="view">
+    <div class="game-topbar">
+      <button id="back-btn" class="btn-secondary">← Back</button>
+      <div id="game-title-bar"></div>
+      <div class="topbar-right">
+        <span class="score-pill">Score: <span id="live-score">0</span></span>
+        <button id="pause-btn" class="btn-secondary">⏸ Pause</button>
+        <button id="restart-btn" class="btn-primary">↺ Restart</button>
+      </div>
+    </div>
+    <div id="game-container"></div>
+  </section>
+
+</main>
+
+<!-- ─── LEADERBOARD MODAL ─────────────────────────────────────────────────── -->
+<div id="leaderboard-modal" class="modal hidden">
+  <div class="modal-box">
+    <h2>🏆 Leaderboard</h2>
+    <div id="leaderboard-content"></div>
+    <button class="btn-primary" id="close-lb">Close</button>
+  </div>
+</div>
+
+<!-- ─── GAME OVER OVERLAY ─────────────────────────────────────────────────── -->
+<div id="game-over-overlay" class="modal hidden">
+  <div class="modal-box gameover-box">
+    <div id="gameover-emoji" class="gameover-emoji">💀</div>
+    <h2 id="gameover-title">Game Over</h2>
+    <p id="gameover-msg" class="gameover-msg"></p>
+    <div class="gameover-btns">
+      <button class="btn-primary" id="go-restart">↺ Play Again</button>
+      <button class="btn-secondary" id="go-home">🏠 Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── TOAST ─────────────────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- ─── SCRIPTS ───────────────────────────────────────────────────────────── -->
+<script src="js/audio.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/pong.js"></script>
+<script src="js/snake.js"></script>
+<script src="js/breakout.js"></script>
+<script src="js/g2048.js"></script>
+<script src="js/sliding.js"></script>
+<script src="js/memory.js"></script>
+<script src="js/flappy.js"></script>
+<script src="js/car.js"></script>
+<script src="js/shooter.js"></script>
+<script src="js/tictactoe.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/tetris.js"></script>
+<script src="js/minesweeper.js"></script>
+<script src="js/whack.js"></script>
+<script src="js/hangman.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
